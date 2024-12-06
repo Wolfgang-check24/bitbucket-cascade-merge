@@ -2,10 +2,7 @@ package internal
 
 import (
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
 	"path"
 	"sort"
 	"strings"
@@ -198,32 +195,14 @@ func (service *BitbucketService) DoApproveAndMerge(repoOwner string, repoName st
 	return nil
 }
 
-// HACK: There isn't an API method in the Bitbucket API Library to do pull request
-// approval. Hacking together one here.
 func (service *BitbucketService) ApprovePullRequest(repoOwner string, repoName string, pullRequestId string) error {
-	url := service.bitbucketClient.GetApiBaseURL() + "/repositories/" + repoOwner + "/" + repoName + "/pullrequests/" + pullRequestId + "/approve"
-	req, err := http.NewRequest("POST", url, nil)
-	if err != nil {
-		return err
+	options := bitbucket.PullRequestsOptions{
+		Owner:    repoOwner,
+		RepoSlug: repoName,
+		ID:       pullRequestId,
 	}
-	token := os.Getenv("BITBUCKET_TOKEN")
-	if token != "" {
-		username := os.Getenv("BITBUCKET_USERNAME")
-		password := os.Getenv("BITBUCKET_PASSWORD")
-		req.SetBasicAuth(username, password)
-	} else {
-		req.Header.Add("Authorization", "Bearer "+token)
-	}
-	response, err := service.bitbucketClient.HttpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	buf, err := io.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-	log.Println(string(buf))
-	return nil
+	_, err := service.bitbucketClient.Repositories.PullRequests.Approve(&options)
+	return err
 }
 
 func (service *BitbucketService) MergePullRequest(repoOwner string, repoName string, pullRequestId string) error {
