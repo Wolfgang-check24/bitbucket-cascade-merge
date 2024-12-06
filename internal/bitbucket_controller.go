@@ -2,14 +2,13 @@ package internal
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 )
 
 type BitbucketController struct {
-	bitbucketService *BitbucketService
+	bitbucketService   *BitbucketService
 	BitbucketSharedKey string
 }
 
@@ -19,20 +18,20 @@ func NewBitbucketController(bitbucketService *BitbucketService, bitbucketSharedK
 	return &BitbucketController{bitbucketService, bitbucketSharedKey}
 }
 
-func (ctrl *BitbucketController) Webhook(c *gin.Context) {
+func (ctrl *BitbucketController) Webhook(w http.ResponseWriter, r *http.Request) {
 
 	var PullRequestMerged PullRequestMergedPayload
-	buf, err := ioutil.ReadAll(c.Request.Body)
+	buf, err := io.ReadAll(r.Body)
 	err = json.Unmarshal(buf, &PullRequestMerged)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if ctrl.validate(c.Request) {
+	if ctrl.validate(r) {
 		go func() {
 			var err error
-			if c.Request.Header.Get("X-Event-Key") == PrFufilled {
+			if r.Header.Get("X-Event-Key") == PrFufilled {
 				err = ctrl.bitbucketService.OnMerge(&PullRequestMerged)
 			} else {
 				err = ctrl.bitbucketService.TryMerge(&PullRequestMerged)
@@ -42,9 +41,10 @@ func (ctrl *BitbucketController) Webhook(c *gin.Context) {
 			}
 		}()
 
-		c.JSON(http.StatusOK, nil)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{}`))
 	} else {
-		c.JSON(http.StatusForbidden, nil)
+		w.WriteHeader(http.StatusUnauthorized)
 	}
 }
 

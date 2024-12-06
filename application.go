@@ -2,14 +2,16 @@ package main
 
 import (
 	"bitbucket-cascade-merge/internal"
-	"github.com/gin-gonic/gin"
-	"github.com/ktrysmt/go-bitbucket"
 	"log"
+	"net/http"
 	"os"
+
+	"github.com/ktrysmt/go-bitbucket"
 )
 
 func main() {
 	port := os.Getenv("PORT")
+	token := os.Getenv("BITBUCKET_TOKEN")
 	username := os.Getenv("BITBUCKET_USERNAME")
 	password := os.Getenv("BITBUCKET_PASSWORD")
 	releaseBranchPrefix := os.Getenv("RELEASE_BRANCH_PREFIX")
@@ -19,11 +21,13 @@ func main() {
 	if port == "" {
 		log.Fatal("$PORT must be set")
 	}
-	if username == "" {
-		log.Fatal("$BITBUCKET_USERNAME must be set. See README.md")
-	}
-	if password == "" {
-		log.Fatal("$BITBUCKET_PASSWORD must be set. See README.md")
+	if token == "" {
+		if username == "" {
+			log.Fatal("$BITBUCKET_TOKEN or $BITBUCKET_USERNAME must be set. See README.md")
+		}
+		if password == "" {
+			log.Fatal("$BITBUCKET_PASSWORD must be set. See README.md")
+		}
 	}
 	if releaseBranchPrefix == "" {
 		log.Fatal("RELEASE_BRANCH_PREFIX must be set. See README.md")
@@ -35,19 +39,26 @@ func main() {
 		log.Fatal("BITBUCKET_SHARED_KEY must be set. See README.md")
 	}
 
-	bitbucketClient := bitbucket.NewBasicAuth(username, password)
+	var bitbucketClient *bitbucket.Client
+	if token != "" {
+		bitbucketClient = bitbucket.NewOAuthbearerToken(token)
+	} else {
+		bitbucketClient = bitbucket.NewBasicAuth(username, password)
+	}
 	bitbucketService := internal.NewBitbucketService(bitbucketClient, releaseBranchPrefix, developmentBranchName)
 	bitbucketController := internal.NewBitbucketController(bitbucketService, bitbucketSharedKey)
 
-	router := gin.New()
-	router.Use(gin.Logger())
-	router.POST("/", bitbucketController.Webhook)
-	router.GET("/", func(c *gin.Context){
-		c.JSON(200, nil)
+	router := http.NewServeMux()
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusOK)
+		} else if r.Method == http.MethodGet {
+			bitbucketController.Webhook(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	})
 
-	_ = router.Run(":" + port)
+	http.ListenAndServe(":"+port, router)
+
 }
-
-
-
