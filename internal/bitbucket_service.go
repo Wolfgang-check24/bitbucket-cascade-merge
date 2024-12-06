@@ -87,16 +87,12 @@ func (service *BitbucketService) NextTarget(oldDest string, cascadeTargets *[]st
 	//
 	destination := "v" + path.Base(oldDest)
 
-	// to same for target branches
-	for i, _ := range targets {
-		targets[i] = "v" + path.Base(targets[i])
-	}
 	sort.SliceStable(targets, func(i, j int) bool {
-		return semver.Compare(targets[i], targets[j]) < 0
+		return semver.Compare("v"+path.Base(targets[i]), "v"+path.Base(targets[j])) < 0
 	})
 	for _, target := range targets {
-		if semver.Compare(destination, target) < 0 {
-			return strings.ReplaceAll(target, "v", service.ReleaseBranchPrefix)
+		if semver.Compare(destination, "v"+path.Base(target)) < 0 {
+			return target
 		}
 	}
 	return service.DevelopmentBranchName
