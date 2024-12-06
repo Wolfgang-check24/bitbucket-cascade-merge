@@ -100,7 +100,7 @@ func (service *BitbucketService) GetBranches(currentReleaseBranchPrefix string, 
 	var options bitbucket.RepositoryBranchOptions
 	options.RepoSlug = repoSlug
 	options.Owner = repoOwner
-	options.Query = "name ~ " + currentReleaseBranchPrefix
+	options.Query = "name ~ \"" + currentReleaseBranchPrefix + "\""
 	options.Pagelen = 100
 
 	branches, err := service.bitbucketClient.Repositories.Repository.ListBranches(&options)

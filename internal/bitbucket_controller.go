@@ -49,11 +49,10 @@ func (ctrl *BitbucketController) Webhook(w http.ResponseWriter, r *http.Request)
 }
 
 func (ctrl *BitbucketController) validate(request *http.Request) bool {
-	keys, ok := request.URL.Query()["key"]
-	if !ok || len(keys[0]) < 1 {
+	key := request.URL.Query().Get("key")
+	if len(key) < 1 {
 		log.Println("Url Param 'key' is missing")
 	}
-	key := keys[0]
 	if ctrl.BitbucketSharedKey == key {
 		return true
 	}
