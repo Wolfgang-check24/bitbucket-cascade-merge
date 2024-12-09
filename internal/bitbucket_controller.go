@@ -20,7 +20,7 @@ func NewBitbucketController(bitbucketService *BitbucketService, bitbucketSharedK
 
 func (ctrl *BitbucketController) Webhook(w http.ResponseWriter, r *http.Request) {
 
-	var PullRequestMerged PullRequestMergedPayload
+	var PullRequestMerged map[string]interface{}
 	buf, err := io.ReadAll(r.Body)
 	err = json.Unmarshal(buf, &PullRequestMerged)
 
@@ -32,9 +32,9 @@ func (ctrl *BitbucketController) Webhook(w http.ResponseWriter, r *http.Request)
 		go func() {
 			var err error
 			if r.Header.Get("X-Event-Key") == PrFufilled {
-				err = ctrl.bitbucketService.OnMerge(&PullRequestMerged)
+				err = ctrl.bitbucketService.OnMerge(PullRequestMerged)
 			} else {
-				err = ctrl.bitbucketService.TryMerge(&PullRequestMerged)
+				err = ctrl.bitbucketService.TryMerge(PullRequestMerged)
 			}
 			if err != nil {
 				log.Fatal(err)

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/ktrysmt/go-bitbucket"
-	"golang.org/x/mod/semver"
 )
 
 type BitbucketService struct {
@@ -26,19 +25,19 @@ func NewBitbucketService(bitbucketClient *bitbucket.Client,
 		developmentBranchName}
 }
 
-func (service *BitbucketService) OnMerge(request *PullRequestMergedPayload) error {
+func (service *BitbucketService) OnMerge(request map[string]interface{}) error {
 
 	// Only operate on release branches
-	sourceBranchName := request.PullRequest.Source.Branch.Name
-	destBranchName := request.PullRequest.Destination.Branch.Name
-	authorId := request.PullRequest.Author.UUID
+	sourceBranchName := request["pullrequest"].(map[string]interface{})["source"].(map[string]interface{})["branch"].(map[string]interface{})["name"].(string)
+	destBranchName := request["pullrequest"].(map[string]interface{})["destination"].(map[string]interface{})["branch"].(map[string]interface{})["name"].(string)
+	authorId := request["pullrequest"].(map[string]interface{})["author"].(map[string]interface{})["uuid"].(string)
 
 	if strings.HasPrefix(destBranchName, service.ReleaseBranchPrefix) {
 
 		log.Println("--------- Pull Request Merged ---------")
 
-		repoName := request.Repository.Name
-		repoOwner := request.Repository.Owner.Username
+		repoName := request["repository"].(map[string]interface{})["name"].(string)
+		repoOwner := request["repository"].(map[string]interface{})["owner"].(map[string]interface{})["username"].(string)
 
 		log.Println("Repository: ", repoName)
 		log.Println("Owner: ", repoOwner)
@@ -63,10 +62,13 @@ func (service *BitbucketService) OnMerge(request *PullRequestMergedPayload) erro
 	return nil
 }
 
-func (service *BitbucketService) TryMerge(dat *PullRequestMergedPayload) error {
+func (service *BitbucketService) TryMerge(dat map[string]interface{}) error {
 
 	log.Println("--------- Checking AutoMergeable ---------")
-	err := service.DoApproveAndMerge(dat.Repository.Owner.Username, dat.Repository.Name)
+	err := service.DoApproveAndMerge(
+		dat["repository"].(map[string]interface{})["owner"].(map[string]interface{})["username"].(string),
+		dat["repository"].(map[string]interface{})["name"].(string),
+	)
 	if err != nil {
 		return err
 	}
@@ -82,17 +84,48 @@ func (service *BitbucketService) NextTarget(oldDest string, cascadeTargets *[]st
 	// e.g. release/YYYY.M.P --> vYYYY.M.P
 	// or release/vergleiche/1.0.0 --> v1.0.0
 	//
-	destination := "v" + path.Base(oldDest)
+	destination := oldDest
 
 	sort.SliceStable(targets, func(i, j int) bool {
-		return semver.Compare("v"+path.Base(targets[i]), "v"+path.Base(targets[j])) < 0
+		return compareBranchVersion(targets[i], targets[j]) < 0
 	})
 	for _, target := range targets {
-		if semver.Compare(destination, "v"+path.Base(target)) < 0 {
+		if compareBranchVersion(destination, target) < 0 {
 			return target
 		}
 	}
 	return service.DevelopmentBranchName
+}
+
+// compareBranchVersion compares two branch versions
+// returns -1 if branch1 < branch2, 0 if branch1 == branch2
+func compareBranchVersion(branch1 string, branch2 string) int {
+	branch1Version := path.Base(branch1)
+	branch2Version := path.Base(branch2)
+	components1 := strings.Split(branch1Version, ".")
+	components2 := strings.Split(branch2Version, ".")
+	for i := 0; i < max(len(components1), len(components2)); i++ {
+		if i >= len(components1) {
+			if i >= len(components2) {
+				continue
+			}
+			if strings.Compare("0", components2[i]) != 0 {
+				return -1
+			}
+			continue
+		}
+		if i >= len(components2) {
+			if strings.Compare("0", components1[i]) != 0 {
+				return 1
+			}
+			continue
+		}
+		if components1[i] == components2[i] {
+			continue
+		}
+		return strings.Compare(components1[i], components2[i])
+	}
+	return 0
 }
 
 func (service *BitbucketService) GetBranches(currentReleaseBranchPrefix string, repoSlug string, repoOwner string) (*[]string, error) {
@@ -188,6 +221,10 @@ func (service *BitbucketService) DoApproveAndMerge(repoOwner string, repoName st
 		log.Println("ID: ", prUnwrapped["id"])
 		log.Println("Title: ", prUnwrapped["title"])
 		err = service.ApprovePullRequest(repoOwner, repoName, fmt.Sprintf("%v", prUnwrapped["id"]))
+		if err != nil {
+			return err
+		}
+		err = service.MergePullRequest(repoOwner, repoName, fmt.Sprintf("%v", prUnwrapped["id"]))
 		if err != nil {
 			return err
 		}
