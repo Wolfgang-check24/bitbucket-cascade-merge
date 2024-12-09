@@ -30,7 +30,11 @@ func (service *BitbucketService) OnMerge(request map[string]interface{}) error {
 	// Only operate on release branches
 	sourceBranchName := request["pullrequest"].(map[string]interface{})["source"].(map[string]interface{})["branch"].(map[string]interface{})["name"].(string)
 	destBranchName := request["pullrequest"].(map[string]interface{})["destination"].(map[string]interface{})["branch"].(map[string]interface{})["name"].(string)
-	authorId := request["pullrequest"].(map[string]interface{})["author"].(map[string]interface{})["uuid"].(string)
+	reviewers := request["pullrequest"].(map[string]interface{})["reviewers"].([]interface{})
+	reviewersUUIDs := make([]string, len(reviewers))
+	for i, reviewer := range reviewers {
+		reviewersUUIDs[i] = reviewer.(map[string]interface{})["uuid"].(string)
+	}
 
 	if strings.HasPrefix(destBranchName, service.ReleaseBranchPrefix) {
 
@@ -52,7 +56,7 @@ func (service *BitbucketService) OnMerge(request map[string]interface{}) error {
 		nextTarget := service.NextTarget(destBranchName, targets)
 		log.Println("Next Target: ", nextTarget)
 
-		err = service.CreatePullRequest(destBranchName, nextTarget, repoName, repoOwner, authorId)
+		err = service.CreatePullRequest(destBranchName, nextTarget, repoName, repoOwner, reviewersUUIDs)
 		if err != nil {
 			return err
 		}
@@ -72,7 +76,7 @@ func (service *BitbucketService) TryMerge(dat map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	//TODO - Try Merge
+
 	log.Println("--------- End Checking AutoMergeable ---------")
 	return nil
 }
@@ -164,7 +168,7 @@ func (service *BitbucketService) PullRequestExists(repoName string, repoOwner st
 	return len(pullRequests["values"].([]interface{})) > 0, nil
 }
 
-func (service *BitbucketService) CreatePullRequest(src string, dest string, repoName string, repoOwner string, reviewer string) error {
+func (service *BitbucketService) CreatePullRequest(src string, dest string, repoName string, repoOwner string, reviewers []string) error {
 
 	exists, err := service.PullRequestExists(repoName, repoOwner, src, dest)
 
@@ -191,7 +195,7 @@ func (service *BitbucketService) CreatePullRequest(src string, dest string, repo
 		DestinationBranch: dest,
 		DestinationCommit: "",
 		Message:           "",
-		Reviewers:         []string{reviewer},
+		Reviewers:         reviewers,
 		States:            nil,
 		Query:             "",
 		Sort:              "",
