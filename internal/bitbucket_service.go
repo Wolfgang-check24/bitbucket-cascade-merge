@@ -154,12 +154,12 @@ func (service *BitbucketService) GetBranches(currentReleaseBranchPrefix string, 
 	return &targets, nil
 }
 
-func (service *BitbucketService) PullRequestExists(repoName string, repoOwner string, source string, destination string, merge_commit string) (bool, error) {
+func (service *BitbucketService) PullRequestExists(repoName string, repoOwner string, source string, destination string, mergeCommit string) (bool, error) {
 
 	options := bitbucket.PullRequestsOptions{
 		Owner:    repoOwner,
 		RepoSlug: repoName,
-		Query:    "destination.branch.name = \"" + destination + "\" AND source.branch.name=\"" + source + "\" AND title=\"" + merge_commit + "\"",
+		Query:    "destination.branch.name = \"" + destination + "\" AND source.branch.name=\"" + source + "\" AND title=\"" + mergeCommit + "\"",
 	}
 	resp, err := service.bitbucketClient.Repositories.PullRequests.Gets(&options)
 	if err != nil {
@@ -169,16 +169,16 @@ func (service *BitbucketService) PullRequestExists(repoName string, repoOwner st
 	return len(pullRequests["values"].([]interface{})) > 0, nil
 }
 
-func (service *BitbucketService) CreatePullRequest(src string, dest string, repoName string, repoOwner string, reviewers []string, merge_commit string) error {
+func (service *BitbucketService) CreatePullRequest(src string, dest string, repoName string, repoOwner string, reviewers []string, mergeCommit string) error {
 
-	exists, err := service.PullRequestExists(repoName, repoOwner, src, dest, merge_commit)
+	exists, err := service.PullRequestExists(repoName, repoOwner, src, dest, mergeCommit)
 
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		log.Println("Skipping creation. Pull Request Exists: ", src, " -> ", dest, " ", merge_commit)
+		log.Println("Skipping creation. Pull Request Exists: ", src, " -> ", dest, " ", mergeCommit)
 		return nil
 	}
 
@@ -187,7 +187,7 @@ func (service *BitbucketService) CreatePullRequest(src string, dest string, repo
 		CommentID: "",
 		Owner:     repoOwner,
 		RepoSlug:  repoName,
-		Title:     "#AutomaticCascade " + src + " -> " + dest + ", " + merge_commit,
+		Title:     "#AutomaticCascade " + src + " -> " + dest + ", " + mergeCommit,
 		Description: "#AutomaticCascade " + src + " -> " + dest + ", this branch will automatically be merged on " +
 			"successful build result+approval",
 		CloseSourceBranch: false,
