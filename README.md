@@ -41,11 +41,12 @@ docker run -p [PORT]:8080 \
 Here are the environment variables you'll need to set:
 
 `RELEASE_BRANCH_PREFIX` - the prefix of the branches you use for your releases. We use `release/` at our shop so our 
-release branches look like `release/2020.12.0` the app uses this to look up branches to target PRs against as well as 
-for some substitutions in semver.go
+release branches look like `release/2020.12.0` ~~the app uses this to look up branches to target PRs against as well as 
+for some substitutions in semver.go~~ But also more sophisticated stuff like release/product/2024.34.0 is supported.
+Prefix really just needed to idenfy your release branchen (in contrast to feature, development or hotfix branchen)
 
 `DEVELOPMENT_BRANCH_NAME` - this should typically be `develop`. If you're not using `develop` for your current develop 
-branch, I question your life choices, but it's a free country.
+branch, I question your life choices, but it's a free country. Or use `main` in case your prever that
 
 `BITBUCKET_USERNAME` - Username for bitbucket user that will be doing the API calls and creating the automatic pull 
 requests. It's best if this is a non-human user, i.e. a dedicated bitbucket account for builds or bots.
