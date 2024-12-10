@@ -23,7 +23,7 @@ make build-image   //(aka `docker build -t bitbucketcascadingmerger -f Dockerfil
 ```
 ## Run
 ```
-docker run -p 12349:8080 \
+docker run -p [PORT]:8080 \
 -e BITBUCKET_USERNAME="[user]" \
 -e BITBUCKET_PASSWORD="[password]"  \
 -e RELEASE_BRANCH_PREFIX="release/" \
