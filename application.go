@@ -49,7 +49,7 @@ func main() {
 	bitbucketController := internal.NewBitbucketController(bitbucketService, bitbucketSharedKey)
 
 	router := http.NewServeMux()
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/cascading-merge", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			w.WriteHeader(http.StatusOK)
 		} else if r.Method == http.MethodGet {
