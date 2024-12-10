@@ -4,10 +4,12 @@ This is a web app written in Go that nearly emulates the Bitbucket Server
 (Formerly Atlassian Stash) feature [Automatic Branch Merging](https://confluence.atlassian.com/bitbucketserver/automatic-branch-merging-776639993.html).
 Unfortunately, the cloud version of Bitbucket doesn't have this feature much to the dissatisfaction of the humans 
 commenting on the infamous [BCLOUD-14286](https://jira.atlassian.com/browse/BCLOUD-14286). It works by using Bitbucket 
-Cloud Webhooks as well as a little bit of semantic versioning a few API calls. It doesn't automatically merge the branches.
-It instead creates pull request with the original author as the reviewer. At Funraise, we use some premium Bitbucket features 
-to enforce build checks and some additional sign offs so we prefer just the automatic PR. There is an unused function 
-`MergePullRequest` you could probably play around with in `bitbucket.go` if you really wanted to get fully automatic merges. 
+Cloud Webhooks as well as a little bit of semantic versioning a few API calls. ~~It doesn't automatically merge the branches.~~
+~~It instead creates pull request with the original author as the reviewer.~~
+~~At Funraise, we use some premium Bitbucket features~~
+~~to enforce build checks and some additional sign offs so we prefer just the automatic PR. There is an unused function~~
+~~`MergePullRequest` you could probably play around with in `bitbucket.go` if you really wanted to get fully automatic merges.~~
+It generates pull requests with the original reviewers. It also merges existing PRs automatically.
 
 
 # Deploy
