@@ -4,3 +4,4 @@ bin/
 .idea
 bitbucket-cascade-merge
 env.sh
+.vscode
