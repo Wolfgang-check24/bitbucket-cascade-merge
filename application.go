@@ -51,9 +51,9 @@ func main() {
 	router := http.NewServeMux()
 	router.HandleFunc("/cascading-merge", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			w.WriteHeader(http.StatusOK)
-		} else if r.Method == http.MethodGet {
 			bitbucketController.Webhook(w, r)
+		} else if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
