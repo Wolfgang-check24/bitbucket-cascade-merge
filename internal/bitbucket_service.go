@@ -54,7 +54,7 @@ func (service *BitbucketService) OnMerge(request map[string]interface{}) error {
 			return err
 		}
 		log.Println("Checking for internal targets: ", targets)
-		nextTarget := service.NextTarget(destBranchName, targets)
+		nextTarget := service.NextTarget(destBranchName, targets, repoName, repoOwner)
 		log.Println("Next Target: ", nextTarget)
 
 		err = service.CreatePullRequest(destBranchName, nextTarget, repoName, repoOwner, reviewersUUIDs, mergeCommit)
@@ -82,7 +82,7 @@ func (service *BitbucketService) TryMerge(dat map[string]interface{}) error {
 	return nil
 }
 
-func (service *BitbucketService) NextTarget(oldDest string, cascadeTargets *[]string) string {
+func (service *BitbucketService) NextTarget(oldDest string, cascadeTargets *[]string, repoName string, repoOwner string) string {
 	targets := *cascadeTargets
 
 	// Extract last component of branch aka version
@@ -99,7 +99,14 @@ func (service *BitbucketService) NextTarget(oldDest string, cascadeTargets *[]st
 			return target
 		}
 	}
-	return service.DevelopmentBranchName
+
+	developmentBranchName, err := service.GetDevelopmentBranch(repoOwner, repoName)
+	if err != nil {
+		log.Println("Error getting development branch: ", err)
+		return service.DevelopmentBranchName
+	}
+
+	return developmentBranchName
 }
 
 // compareBranchVersion compares two branch versions
@@ -255,4 +262,24 @@ func (service *BitbucketService) MergePullRequest(repoOwner string, repoName str
 	}
 	_, err := service.bitbucketClient.Repositories.PullRequests.Merge(&options)
 	return err
+}
+
+func (service *BitbucketService) GetDevelopmentBranch(repoOwner string, repoName string) (string, error) {
+	options := bitbucket.RepositoryBranchingModelOptions{
+		Owner:    repoOwner,
+		RepoSlug: repoName,
+	}
+	branchingModel, err := service.bitbucketClient.Repositories.Repository.BranchingModel(&options)
+
+	if err != nil {
+		return "", err
+	}
+
+	developmentBranchName := branchingModel.Development.Branch.Name
+
+	if developmentBranchName == "" {
+		return "", fmt.Errorf("Development branch not found")
+	}
+
+	return developmentBranchName, nil
 }
