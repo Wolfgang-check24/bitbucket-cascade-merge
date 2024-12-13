@@ -58,7 +58,9 @@ func (service *BitbucketService) OnMerge(request map[string]interface{}) error {
 
 		targets, err := service.GetBranches(path.Dir(destBranchName), repoName, repoOwner)
 		if err != nil {
-			return err
+			log.Println("Error getting branches: ", err)
+			log.Println("--------- End Request Merged ---------")
+			return nil
 		}
 		log.Println("Checking for internal targets: ", targets)
 		nextTarget := service.NextTarget(destBranchName, targets, repoName, repoOwner)
@@ -66,7 +68,7 @@ func (service *BitbucketService) OnMerge(request map[string]interface{}) error {
 
 		err = service.CreatePullRequest(destBranchName, nextTarget, repoName, repoOwner, reviewersUUIDs, mergeCommit)
 		if err != nil {
-			return err
+			log.Println("Error creating pull request: ", err)
 		}
 
 		log.Println("--------- End Request Merged ---------")
@@ -82,7 +84,7 @@ func (service *BitbucketService) TryMerge(dat map[string]interface{}) error {
 		dat["repository"].(map[string]interface{})["name"].(string),
 	)
 	if err != nil {
-		return err
+		log.Println("Error trying to merge: ", err)
 	}
 
 	log.Println("--------- End Checking AutoMergeable ---------")
@@ -168,12 +170,12 @@ func (service *BitbucketService) GetBranches(currentReleaseBranchPrefix string, 
 	return &targets, nil
 }
 
-func (service *BitbucketService) PullRequestExists(repoName string, repoOwner string, source string, destination string, mergeCommit string) (bool, error) {
+func (service *BitbucketService) PullRequestExists(repoName string, repoOwner string, source string, destination string) (bool, error) {
 
 	options := bitbucket.PullRequestsOptions{
 		Owner:    repoOwner,
 		RepoSlug: repoName,
-		Query:    "destination.branch.name = \"" + destination + "\" AND source.branch.name=\"" + source + "\" AND title=\"" + mergeCommit + "\"",
+		Query:    "destination.branch.name = \"" + destination + "\" AND source.branch.name=\"" + source + "\" AND state=\"OPEN\"",
 	}
 	resp, err := service.bitbucketClient.Repositories.PullRequests.Gets(&options)
 	if err != nil {
@@ -185,14 +187,14 @@ func (service *BitbucketService) PullRequestExists(repoName string, repoOwner st
 
 func (service *BitbucketService) CreatePullRequest(src string, dest string, repoName string, repoOwner string, reviewers []string, mergeCommit string) error {
 
-	exists, err := service.PullRequestExists(repoName, repoOwner, src, dest, mergeCommit)
+	exists, err := service.PullRequestExists(repoName, repoOwner, src, dest)
 
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		log.Println("Skipping creation. Pull Request Exists: ", src, " -> ", dest, " ", mergeCommit)
+		log.Println("Skipping creation. Pull Request Exists: ", src, " -> ", dest)
 		return nil
 	}
 
