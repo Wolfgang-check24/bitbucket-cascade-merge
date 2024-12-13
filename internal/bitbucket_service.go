@@ -260,7 +260,9 @@ func (service *BitbucketService) ApprovePullRequest(repoOwner string, repoName s
 			ID:       pullRequestId,
 		}
 		_, err := client.Repositories.PullRequests.Approve(&options)
-		return err
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
