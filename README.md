@@ -57,6 +57,9 @@ in this case
 `BITBUCKET_PASSWORD` - Password for bitbucket user that will be doing the API calls and creating the automatic pull 
 requests. It's best if this is a non-human user, i.e. a dedicated bitbucket account for builds or bots.
 
+`BITBUCKET_USERNAME_[i]`, `BITBUCKET_PASSWORD_[i]` - Username and Password for Approvers. In case you merge restrictions
+require 1 or more reprovers.
+
 `BITBUCKET_SHARED_KEY` - A random UUID or long value to act as an "Api Key" to protect our webhook
 
 ## Setting up the Webhook

@@ -11,18 +11,25 @@ import (
 )
 
 type BitbucketService struct {
-	bitbucketClient       *bitbucket.Client
-	ReleaseBranchPrefix   string
-	DevelopmentBranchName string
+	bitbucketClient          *bitbucket.Client
+	approvalBitbucketClients []*bitbucket.Client
+	ReleaseBranchPrefix      string
+	DevelopmentBranchName    string
 }
 
-func NewBitbucketService(bitbucketClient *bitbucket.Client,
+func NewBitbucketService(
+	bitbucketClient *bitbucket.Client,
+	approvalBitbucketClients []*bitbucket.Client,
 	releaseBranchPrefix string,
-	developmentBranchName string) *BitbucketService {
+	developmentBranchName string,
+) *BitbucketService {
 
-	return &BitbucketService{bitbucketClient,
+	return &BitbucketService{
+		bitbucketClient,
+		approvalBitbucketClients,
 		releaseBranchPrefix,
-		developmentBranchName}
+		developmentBranchName,
+	}
 }
 
 func (service *BitbucketService) OnMerge(request map[string]interface{}) error {
@@ -245,13 +252,17 @@ func (service *BitbucketService) DoApproveAndMerge(repoOwner string, repoName st
 }
 
 func (service *BitbucketService) ApprovePullRequest(repoOwner string, repoName string, pullRequestId string) error {
-	options := bitbucket.PullRequestsOptions{
-		Owner:    repoOwner,
-		RepoSlug: repoName,
-		ID:       pullRequestId,
+	approversClients := append(service.approvalBitbucketClients, service.bitbucketClient)
+	for _, client := range approversClients {
+		options := bitbucket.PullRequestsOptions{
+			Owner:    repoOwner,
+			RepoSlug: repoName,
+			ID:       pullRequestId,
+		}
+		_, err := client.Repositories.PullRequests.Approve(&options)
+		return err
 	}
-	_, err := service.bitbucketClient.Repositories.PullRequests.Approve(&options)
-	return err
+	return nil
 }
 
 func (service *BitbucketService) MergePullRequest(repoOwner string, repoName string, pullRequestId string) error {
