@@ -58,7 +58,9 @@ func (service *BitbucketService) OnMerge(request map[string]interface{}) error {
 
 		targets, err := service.GetBranches(path.Dir(destBranchName), repoName, repoOwner)
 		if err != nil {
-			return err
+			log.Println("Error getting branches: ", err)
+			log.Println("--------- End Request Merged ---------")
+			return nil
 		}
 		log.Println("Checking for internal targets: ", targets)
 		nextTarget := service.NextTarget(destBranchName, targets, repoName, repoOwner)
@@ -66,7 +68,7 @@ func (service *BitbucketService) OnMerge(request map[string]interface{}) error {
 
 		err = service.CreatePullRequest(destBranchName, nextTarget, repoName, repoOwner, reviewersUUIDs, mergeCommit)
 		if err != nil {
-			return err
+			log.Println("Error creating pull request: ", err)
 		}
 
 		log.Println("--------- End Request Merged ---------")
@@ -82,7 +84,7 @@ func (service *BitbucketService) TryMerge(dat map[string]interface{}) error {
 		dat["repository"].(map[string]interface{})["name"].(string),
 	)
 	if err != nil {
-		return err
+		log.Println("Error trying to merge: ", err)
 	}
 
 	log.Println("--------- End Checking AutoMergeable ---------")
