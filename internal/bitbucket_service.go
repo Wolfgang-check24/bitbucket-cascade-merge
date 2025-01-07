@@ -5,6 +5,7 @@ import (
 	"log"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/ktrysmt/go-bitbucket"
@@ -130,21 +131,29 @@ func compareBranchVersion(branch1 string, branch2 string) int {
 			if i >= len(components2) {
 				continue
 			}
-			if strings.Compare("0", components2[i]) != 0 {
+			comp2, _ := strconv.Atoi(components2[i])
+			if comp2 != 0 {
 				return -1
 			}
 			continue
 		}
 		if i >= len(components2) {
-			if strings.Compare("0", components1[i]) != 0 {
+			comp1, _ := strconv.Atoi(components1[i])
+			if comp1 != 0 {
 				return 1
 			}
 			continue
 		}
-		if components1[i] == components2[i] {
+		comp1, _ := strconv.Atoi(components1[i])
+		comp2, _ := strconv.Atoi(components2[i])
+		if comp1 == comp2 {
 			continue
 		}
-		return strings.Compare(components1[i], components2[i])
+		if comp1 < comp2 {
+			return -1
+		} else if comp1 > comp2 {
+			return 1
+		}
 	}
 	return 0
 }
