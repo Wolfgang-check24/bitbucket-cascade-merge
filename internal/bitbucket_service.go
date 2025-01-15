@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"path"
@@ -64,7 +65,14 @@ func (service *BitbucketService) OnMerge(request map[string]interface{}) error {
 			return nil
 		}
 		log.Println("Checking for internal targets: ", targets)
-		nextTarget := service.NextTarget(destBranchName, targets, repoName, repoOwner)
+
+		nextTarget, err := service.NextTarget(destBranchName, targets, repoName, repoOwner)
+		if err != nil {
+			log.Println("Error getting next target: ", err)
+			log.Println("--------- End Request Merged ---------")
+			return nil
+		}
+
 		log.Println("Next Target: ", nextTarget)
 
 		err = service.CreatePullRequest(destBranchName, nextTarget, repoName, repoOwner, reviewersUUIDs, mergeCommit)
@@ -92,7 +100,7 @@ func (service *BitbucketService) TryMerge(dat map[string]interface{}) error {
 	return nil
 }
 
-func (service *BitbucketService) NextTarget(oldDest string, cascadeTargets *[]string, repoName string, repoOwner string) string {
+func (service *BitbucketService) NextTarget(oldDest string, cascadeTargets *[]string, repoName string, repoOwner string) (string, error) {
 	targets := *cascadeTargets
 
 	// Extract last component of branch aka version
@@ -106,17 +114,21 @@ func (service *BitbucketService) NextTarget(oldDest string, cascadeTargets *[]st
 	})
 	for _, target := range targets {
 		if compareBranchVersion(destination, target) < 0 {
-			return target
+			return target, nil
 		}
 	}
 
 	developmentBranchName, err := service.GetDevelopmentBranch(repoOwner, repoName)
 	if err != nil {
 		log.Println("Error getting development branch: ", err)
-		return service.DevelopmentBranchName
+		return service.DevelopmentBranchName, nil
 	}
 
-	return developmentBranchName
+	if strings.HasPrefix(developmentBranchName, service.ReleaseBranchPrefix) {
+		return "", errors.New("Development branch is a release branch")
+	}
+
+	return developmentBranchName, nil
 }
 
 // compareBranchVersion compares two branch versions
